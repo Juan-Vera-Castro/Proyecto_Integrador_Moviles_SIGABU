@@ -1,0 +1,71 @@
+# Levantar: docker compose up -d --build   →   http://localhost:8000
+# Usa el mismo .env del proyecto. La base y MinIO se alcanzan por el túnel SSH abierto en el equipo (ver README).
+services:
+  app:
+    build: .
+    image: sigabu:latest
+    container_name: sigabu
+    ports:
+      - "8000:80"
+    env_file: .env
+    environment:
+      APP_URL: http://localhost:8000
+      # Dentro del contenedor 127.0.0.1 es el propio contenedor, no el equipo anfitrión
+      DB_HOST: host.docker.internal
+      DB_VBG_HOST: host.docker.internal
+      SIGABU_S3_ENDPOINT: http://host.docker.internal:9000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Firmas, documentos del repositorio y logs sobreviven a reconstruir la imagen
+      - sigabu-storage:/var/www/html/storage/app
+      - sigabu-logs:/var/www/html/storage/logs
+    restart: unless-stopped
+
+  # Correos de los avisos (cola) y programador de recordatorios, con la misma imagen.
+  worker:
+    build: .
+    image: sigabu:latest
+    container_name: sigabu-worker
+    command: ["php", "artisan", "queue:work", "--tries=3", "--sleep=3", "--max-time=3600"]
+    user: www-data
+    env_file: .env
+    environment:
+      APP_URL: http://localhost:8000
+      DB_HOST: host.docker.internal
+      DB_VBG_HOST: host.docker.internal
+      SIGABU_S3_ENDPOINT: http://host.docker.internal:9000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - sigabu-storage:/var/www/html/storage/app
+      - sigabu-logs:/var/www/html/storage/logs
+    depends_on:
+      - app
+    stop_grace_period: 60s
+    restart: unless-stopped
+
+  scheduler:
+    build: .
+    image: sigabu:latest
+    container_name: sigabu-scheduler
+    command: ["php", "artisan", "schedule:work"]
+    user: www-data
+    env_file: .env
+    environment:
+      APP_URL: http://localhost:8000
+      DB_HOST: host.docker.internal
+      DB_VBG_HOST: host.docker.internal
+      SIGABU_S3_ENDPOINT: http://host.docker.internal:9000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - sigabu-storage:/var/www/html/storage/app
+      - sigabu-logs:/var/www/html/storage/logs
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  sigabu-storage:
+  sigabu-logs:

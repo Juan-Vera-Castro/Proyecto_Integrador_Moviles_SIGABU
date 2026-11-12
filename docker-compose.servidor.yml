@@ -1,0 +1,75 @@
+# SIGABU en el servidor 192.168.10.67. Se instala con: sudo sh docker/servidor/instalar.sh
+# El puerto solo escucha en el propio servidor: los usuarios entran por el Apache con HTTPS.
+name: sigabu
+
+services:
+  app:
+    build: .
+    image: sigabu:latest
+    container_name: sigabu
+    ports:
+      - "127.0.0.1:8000:80"
+    env_file: .env
+    extra_hosts:
+      # PostgreSQL corre en el servidor, fuera de Docker
+      - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      - minio
+    volumes:
+      - sigabu-storage:/var/www/html/storage/app
+      - sigabu-logs:/var/www/html/storage/logs
+    restart: unless-stopped
+
+  # Envía los correos de los avisos (cola "database"). Sale cada hora y Docker lo reinicia,
+  # así toma el código nuevo y no acumula memoria. Corre como www-data, igual que Apache,
+  # para que los archivos de storage/logs no queden de root.
+  worker:
+    build: .
+    image: sigabu:latest
+    container_name: sigabu-worker
+    command: ["php", "artisan", "queue:work", "--tries=3", "--sleep=3", "--max-time=3600"]
+    user: www-data
+    env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      - minio
+    volumes:
+      - sigabu-storage:/var/www/html/storage/app
+      - sigabu-logs:/var/www/html/storage/logs
+    depends_on:
+      - app
+    stop_grace_period: 60s
+    restart: unless-stopped
+
+  # Programador de tareas: recordatorios cada 5 minutos y limpieza diaria (routes/console.php).
+  scheduler:
+    build: .
+    image: sigabu:latest
+    container_name: sigabu-scheduler
+    command: ["php", "artisan", "schedule:work"]
+    user: www-data
+    env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      - minio
+    volumes:
+      - sigabu-storage:/var/www/html/storage/app
+      - sigabu-logs:/var/www/html/storage/logs
+    depends_on:
+      - app
+    restart: unless-stopped
+
+networks:
+  # La red que crea docker/minio al instalarse
+  minio:
+    external: true
+    name: minio_default
+
+volumes:
+  sigabu-storage:
+  sigabu-logs:
