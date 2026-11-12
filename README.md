@@ -272,6 +272,34 @@ Audios, firmas, transcripciones e informes solo los ve el profesional a cargo, y
 
 6. **La rama `VIOLENCIA_GENERO` no se publica por separado.** Su backend Java deja la consola de su base abierta a la red y su Laravel no tiene inicio de sesión. Todo lo que hacía y funcionaba ya está aquí, detrás del login de SIGABU.
 
+## App móvil del estudiante (Flutter)
+
+La carpeta [sigabu_movil](sigabu_movil) es la app Android/iOS con todo el panel del estudiante: inicio con próxima cita y tareas, solicitar cita, mis citas (aceptar o rechazar horarios), consentimiento informado con firma táctil (general y de Inclusión, con borrador, PDF y revocación), reporte de Violencias de Género, apoyo alimentario (con el pase QR), recursos, avisos y perfil.
+
+La app habla con Laravel por la API `/api/movil/...` ([routes/api.php](routes/api.php)), con tokens de **Laravel Sanctum**. Solo entra el rol estudiante. Las consultas están en `app/Http/Controllers/Api/Movil`; las acciones que guardan datos llaman a los mismos controladores de la web, así las reglas de negocio no se duplican.
+
+1. **Migración.** `2026_11_12_000000_tokens_app_movil` crea `personal_access_tokens` (corre en PostgreSQL y SQLite; en PostgreSQL, con `sigabu_owner`). El token vence a los 7 días (`SIGABU_MOVIL_TOKEN_MINUTOS` en `.env`). La opción 1 (datos ficticios) ya la crea con `php tests/e2e/preparar.php`.
+
+2. **Correrla en el emulador** (necesitas Flutter y Android Studio con un emulador):
+
+   ```
+   php tests/e2e/preparar.php
+   php artisan serve --env=e2e --host=0.0.0.0 --port=8123
+   ```
+
+   En otra terminal:
+
+   ```
+   cd sigabu_movil
+   flutter pub get
+   flutter emulators --launch <emulador>
+   flutter run
+   ```
+
+   Entra con `persona.e2e@uceva.edu.co` / `Prueba123`. El emulador de Android llega al computador por `10.0.2.2`, por eso la app usa `http://10.0.2.2:8123` por defecto.
+
+3. **Otro servidor o un celular real:** `flutter run --dart-define=API_URL=http://<ip-del-computador>:8123` (el celular y el computador en la misma red), o la dirección HTTPS del servidor de SIGABU.
+
 
 # Publicar cambios en el servidor
 
