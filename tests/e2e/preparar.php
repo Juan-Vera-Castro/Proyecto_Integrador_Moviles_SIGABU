@@ -183,4 +183,27 @@ App\Models\Alimentos\Lote::create([
     'registrado_por' => $almacenUser->id_usuario,
 ]);
 
+// App móvil del estudiante: tabla de tokens de Sanctum y algo que ver en su inicio y sus recursos.
+(require $raiz.'/database/migrations/2026_11_12_000000_tokens_app_movil.php')->up();
+$casoPersona = Caso::where('id_solicitud_origen', $solicitud->id_solicitud)->firstOrFail();
+App\Models\TareaTerapeutica::create([
+    'id_caso' => $casoPersona->id_caso,
+    'id_profesional' => $profesional->id_usuario,
+    'titulo' => 'Registrar las barreras que encuentres en clase',
+    'descripcion' => 'Anota durante la semana las situaciones de clase en las que necesitaste un apoyo o un ajuste.',
+    'fecha_asignacion' => date('Y-m-d'),
+    'fecha_limite' => date('Y-m-d', strtotime('+5 days')),
+    'estado' => App\Models\TareaTerapeutica::ESTADO_PENDIENTE,
+]);
+App\Models\RepositorioDocumento::create([
+    'titulo' => 'Línea 106: apoyo emocional',
+    'categoria' => 'Material psicoeducativo',
+    'descripcion' => 'Información de la línea gratuita de atención en crisis emocional, 24 horas.',
+    'url' => 'https://www.minsalud.gov.co',
+    'audiencia' => App\Models\RepositorioDocumento::TODOS,
+    'activo' => true,
+    'fecha_publicacion' => date('Y-m-d H:i:s'),
+    'publicado_por' => $profesional->id_usuario,
+]);
+
 echo "Entorno E2E listo.\n";
