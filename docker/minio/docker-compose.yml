@@ -1,0 +1,36 @@
+# Almacenamiento de firmas y repositorio de SIGABU. Se instala con: sh instalar.sh
+# Los puertos solo escuchan en el propio servidor; desde otro equipo se entra por túnel SSH.
+services:
+  minio:
+    build: .
+    image: sigabu-minio:2025-10-15
+    container_name: sigabu-minio
+    env_file: .env
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - minio-datos:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  # Tarea de una sola vez: crea los buckets y el usuario de la aplicación (se puede repetir)
+  buckets:
+    image: sigabu-minio:2025-10-15
+    profiles: ["instalacion"]
+    env_file: .env
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        set -e
+        mc alias set sigabu http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        mc mb --ignore-existing sigabu/consentimientos-firmas sigabu/repositorio-documentos sigabu/inclusion-evidencias sigabu/vbg-evidencias
+        mc admin user add sigabu "$$SIGABU_S3_KEY" "$$SIGABU_S3_SECRET"
+        mc admin policy attach sigabu readwrite --user "$$SIGABU_S3_KEY" || true
+
+volumes:
+  minio-datos:

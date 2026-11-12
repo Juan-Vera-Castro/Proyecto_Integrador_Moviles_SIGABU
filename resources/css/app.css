@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Oculta lo que Alpine muestra después de iniciar, para que no parpadee al cargar. */
+[x-cloak] {
+    display: none !important;
+}
+
+/* Alto real de la ventana: en celular 100vh incluye la barra del navegador y corta el final
+   de la pantalla. El primer valor queda para navegadores sin dvh. */
+.alto-app {
+    height: 100vh;
+    height: 100dvh;
+}
+
+/* Por debajo de lg el menú lateral es un panel deslizable; desde lg sigue fijo a la izquierda.
+   Al cerrar, visibility espera a que termine la animación y saca los enlaces del orden de tabulación. */
+@media (max-width: 1023.98px) {
+    .menu-lateral {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 40;
+        max-width: 85vw;
+        visibility: hidden;
+        transform: translateX(-100%);
+        transition: transform 0.2s ease, visibility 0s linear 0.2s;
+    }
+
+    .menu-lateral.abierto {
+        visibility: visible;
+        transform: none;
+        transition: transform 0.2s ease;
+    }
+
+    /* Descuenta la barra superior móvil (h-14) para no sumar scroll en pantallas cortas. */
+    main .min-h-screen {
+        min-height: calc(100vh - 3.5rem);
+        min-height: calc(100dvh - 3.5rem);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .menu-lateral,
+    .menu-lateral.abierto {
+        transition: none;
+    }
+}
+
+/* iOS acerca la página al enfocar un campo con letra menor a 16px. */
+@media (hover: none) and (pointer: coarse) {
+    input:not([type='checkbox']):not([type='radio']),
+    select,
+    textarea {
+        font-size: 16px !important; /* gana sobre text-sm y similares */
+    }
+}
